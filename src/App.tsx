@@ -12,6 +12,7 @@ import RequireAuth from "./components/auth/RequireAuth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import CompanyList from "./pages/CompanyList";
+import EmployeeList from "./pages/EmployeeList";
 import ReceiptGenerator from "./pages/ReceiptGenerator";
 import ReceiptHistory from "./pages/ReceiptHistory";
 import NotFound from "./pages/NotFound";
@@ -43,6 +44,11 @@ const App = () => (
                   <CompanyList />
                 </RequireAuth>
               } />
+              <Route path="/funcionarios" element={
+                <RequireAuth allowedRoles={["admin"]}>
+                  <EmployeeList />
+                </RequireAuth>
+              } />
               <Route path="/gerar-recibos" element={
                 <RequireAuth allowedRoles={["admin"]}>
                   <ReceiptGenerator />
@@ -58,6 +64,11 @@ const App = () => (
               <Route path="/meus-recibos" element={
                 <RequireAuth allowedRoles={["employee"]}>
                   <ReceiptHistory />
+                </RequireAuth>
+              } />
+              <Route path="/perfil" element={
+                <RequireAuth>
+                  <NotFound />
                 </RequireAuth>
               } />
               
