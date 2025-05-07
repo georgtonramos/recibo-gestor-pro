@@ -1,8 +1,7 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/layouts/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Download, Building, Users, ArrowDown, ArrowUp } from "lucide-react";
+import { FileText, Download, Building, Users, ArrowDown, ArrowUp, FileArchive, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
