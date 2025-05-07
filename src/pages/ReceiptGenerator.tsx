@@ -19,8 +19,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Trash, Plus, Download } from "lucide-react";
+import { FileText, Trash, Plus, Download, Users } from "lucide-react";
 
 const MOCK_COMPANIES = [
   { id: 1, name: "TechCorp" },
@@ -38,6 +54,18 @@ const MOCK_RECEIPT_TYPES = [
   { id: 5, name: "Outros" },
 ];
 
+// Mock employee data
+const MOCK_EMPLOYEES = [
+  { id: 1, name: "João Silva", position: "Desenvolvedor", company: "TechCorp", department: "TI" },
+  { id: 2, name: "Maria Oliveira", position: "Designer", company: "TechCorp", department: "Design" },
+  { id: 3, name: "Pedro Santos", position: "Gerente", company: "Mega Sistemas", department: "Administração" },
+  { id: 4, name: "Ana Costa", position: "Analista", company: "Construtech", department: "Financeiro" },
+  { id: 5, name: "Carlos Ferreira", position: "Engenheiro", company: "Global Services", department: "Engenharia" },
+  { id: 6, name: "Fernanda Lima", position: "Marketing", company: "Inova Tech", department: "Marketing" },
+  { id: 7, name: "Roberto Alves", position: "Vendedor", company: "TechCorp", department: "Vendas" },
+  { id: 8, name: "Luciana Mendes", position: "Recursos Humanos", company: "Mega Sistemas", department: "RH" },
+];
+
 const INITIAL_EMPLOYEE = { id: Date.now(), name: "", position: "", days: "", value: "" };
 
 const ReceiptGenerator = () => {
@@ -51,6 +79,8 @@ const ReceiptGenerator = () => {
   });
   
   const [showPreview, setShowPreview] = useState(false);
+  const [isEmployeeDialogOpen, setIsEmployeeDialogOpen] = useState(false);
+  const [employeeSearch, setEmployeeSearch] = useState("");
   const { toast } = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,6 +120,40 @@ const ReceiptGenerator = () => {
       description: `${formData.employees.length} recibos foram gerados.`,
     });
   };
+
+  const addExistingEmployee = (employee) => {
+    const newEmployee = {
+      id: Date.now(),
+      name: employee.name,
+      position: employee.position,
+      days: "",
+      value: ""
+    };
+    
+    setFormData(prev => ({
+      ...prev,
+      employees: [...prev.employees, newEmployee]
+    }));
+    
+    toast({
+      title: "Funcionário adicionado",
+      description: `${employee.name} foi adicionado à lista.`,
+    });
+    
+    setIsEmployeeDialogOpen(false);
+  };
+
+  // Filter employees based on search and selected company
+  const filteredEmployees = MOCK_EMPLOYEES.filter(employee => {
+    const matchesSearch = employeeSearch === "" || 
+      employee.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
+      employee.position.toLowerCase().includes(employeeSearch.toLowerCase());
+      
+    const matchesCompany = formData.companyId === "" || 
+      MOCK_COMPANIES.find(c => c.id.toString() === formData.companyId)?.name === employee.company;
+      
+    return matchesSearch && matchesCompany;
+  });
 
   const selectedCompany = MOCK_COMPANIES.find(c => c.id.toString() === formData.companyId);
   const selectedType = MOCK_RECEIPT_TYPES.find(t => t.id.toString() === formData.receiptType);
@@ -205,13 +269,22 @@ const ReceiptGenerator = () => {
                 <CardTitle>Funcionários</CardTitle>
                 <CardDescription>Adicione os funcionários para gerar os recibos</CardDescription>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={addEmployee}
-              >
-                <Plus className="h-4 w-4 mr-1" /> Adicionar
-              </Button>
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsEmployeeDialogOpen(true)}
+                >
+                  <Users className="h-4 w-4 mr-1" /> Buscar
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={addEmployee}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Adicionar
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
               {formData.employees.map((employee, index) => (
@@ -361,6 +434,58 @@ const ReceiptGenerator = () => {
           </Card>
         </div>
       </div>
+
+      {/* Employee search dialog */}
+      <Dialog open={isEmployeeDialogOpen} onOpenChange={setIsEmployeeDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Selecionar Funcionários</DialogTitle>
+            <DialogDescription>
+              Busque e adicione funcionários existentes aos recibos
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Command className="rounded-lg border shadow-md">
+            <CommandInput 
+              placeholder="Buscar funcionário..." 
+              value={employeeSearch}
+              onValueChange={setEmployeeSearch}
+            />
+            <CommandList>
+              <CommandEmpty>Nenhum funcionário encontrado.</CommandEmpty>
+              <CommandGroup heading="Funcionários">
+                {filteredEmployees.length === 0 ? (
+                  <p className="py-6 text-center text-sm">
+                    Nenhum funcionário encontrado com esses filtros.
+                  </p>
+                ) : (
+                  filteredEmployees.map((employee) => (
+                    <CommandItem
+                      key={employee.id}
+                      className="flex justify-between"
+                      onSelect={() => addExistingEmployee(employee)}
+                    >
+                      <div>
+                        <p>{employee.name}</p>
+                        <p className="text-sm text-muted-foreground">{employee.position}</p>
+                      </div>
+                      <span className="text-xs bg-secondary px-2 py-1 rounded-full">
+                        {employee.company}
+                      </span>
+                    </CommandItem>
+                  ))
+                )}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEmployeeDialogOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };
