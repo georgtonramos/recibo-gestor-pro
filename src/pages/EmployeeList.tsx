@@ -74,7 +74,7 @@ const EmployeeList = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCompany, setSelectedCompany] = useState("");
+  const [selectedCompany, setSelectedCompany] = useState("all"); // Changed from empty string to "all"
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -97,7 +97,7 @@ const EmployeeList = () => {
       employee.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
       employee.department.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesCompany = !selectedCompany || employee.company === selectedCompany;
+    const matchesCompany = selectedCompany === "all" || employee.company === selectedCompany; // Updated condition
     
     return matchesSearch && matchesCompany;
   });
@@ -169,7 +169,7 @@ const EmployeeList = () => {
                   <SelectValue placeholder="Todas as empresas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as empresas</SelectItem>
+                  <SelectItem value="all">Todas as empresas</SelectItem> {/* Changed from empty string to "all" */}
                   {MOCK_COMPANIES.map((company) => (
                     <SelectItem key={company.id} value={company.name}>
                       {company.name}

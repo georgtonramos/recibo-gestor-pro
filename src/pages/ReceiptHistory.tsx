@@ -80,8 +80,8 @@ const ReceiptHistory = () => {
   const isAdmin = user?.role === 'admin';
   
   const [filters, setFilters] = useState({
-    company: "",
-    receiptType: "",
+    company: "all", // Changed from empty string to "all"
+    receiptType: "all", // Changed from empty string to "all"
     reference: "",
     searchQuery: "",
   });
@@ -123,8 +123,8 @@ const ReceiptHistory = () => {
   
   // Apply filters
   filteredReceipts = filteredReceipts.filter(receipt => {
-    const matchesCompany = !filters.company || receipt.company === MOCK_COMPANIES.find(c => c.id.toString() === filters.company)?.name;
-    const matchesType = !filters.receiptType || receipt.type === MOCK_RECEIPT_TYPES.find(t => t.id.toString() === filters.receiptType)?.name;
+    const matchesCompany = filters.company === "all" || receipt.company === MOCK_COMPANIES.find(c => c.id.toString() === filters.company)?.name; // Updated condition
+    const matchesType = filters.receiptType === "all" || receipt.type === MOCK_RECEIPT_TYPES.find(t => t.id.toString() === filters.receiptType)?.name; // Updated condition
     const matchesReference = !filters.reference || receipt.reference.includes(filters.reference);
     const matchesSearch = !filters.searchQuery || 
       receipt.employee.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
@@ -176,7 +176,7 @@ const ReceiptHistory = () => {
                     <SelectValue placeholder="Todas as empresas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as empresas</SelectItem>
+                    <SelectItem value="all">Todas as empresas</SelectItem> {/* Changed from empty string to "all" */}
                     {MOCK_COMPANIES.map((company) => (
                       <SelectItem key={company.id} value={company.id.toString()}>
                         {company.name}
@@ -197,7 +197,7 @@ const ReceiptHistory = () => {
                   <SelectValue placeholder="Todos os tipos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os tipos</SelectItem>
+                  <SelectItem value="all">Todos os tipos</SelectItem> {/* Changed from empty string to "all" */}
                   {MOCK_RECEIPT_TYPES.map((type) => (
                     <SelectItem key={type.id} value={type.id.toString()}>
                       {type.name}
