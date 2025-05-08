@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import AppLayout from "@/components/layouts/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Trash, Plus, Download, Users } from "lucide-react";
+import { FileText, Trash, Plus, Download, Users, File } from "lucide-react";
 
 const MOCK_COMPANIES = [
   { id: 1, name: "TechCorp" },
@@ -81,6 +80,7 @@ const ReceiptGenerator = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [isEmployeeDialogOpen, setIsEmployeeDialogOpen] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState("");
+  const [unifiedPdfPreview, setUnifiedPdfPreview] = useState(false);
   const { toast } = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,9 +115,20 @@ const ReceiptGenerator = () => {
   const generateReceipts = () => {
     // In a real app, this would call the API to generate receipts
     setShowPreview(true);
+    setUnifiedPdfPreview(false);
     toast({
       title: "Recibos gerados com sucesso!",
       description: `${formData.employees.length} recibos foram gerados.`,
+    });
+  };
+
+  const generateUnifiedPdf = () => {
+    // In a real app, this would generate a single PDF with all receipts
+    setUnifiedPdfPreview(true);
+    setShowPreview(false);
+    toast({
+      title: "PDF Unificado gerado com sucesso!",
+      description: `Um PDF contendo ${formData.employees.length} recibos foi gerado.`,
     });
   };
 
@@ -345,16 +356,26 @@ const ReceiptGenerator = () => {
                 </div>
               ))}
             </CardContent>
-            <CardFooter className="flex justify-between">
+            <CardFooter className="flex flex-col sm:flex-row sm:justify-between gap-2">
               <Button variant="outline">Cancelar</Button>
-              <Button 
-                onClick={generateReceipts}
-                className="bg-receipt-600 hover:bg-receipt-700"
-                disabled={!isFormValid()}
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                Gerar Recibos
-              </Button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button 
+                  onClick={generateReceipts}
+                  className="bg-receipt-600 hover:bg-receipt-700 w-full sm:w-auto"
+                  disabled={!isFormValid()}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Gerar Recibos
+                </Button>
+                <Button 
+                  onClick={generateUnifiedPdf}
+                  className="bg-primary w-full sm:w-auto"
+                  disabled={!isFormValid() || formData.employees.length < 2}
+                >
+                  <File className="mr-2 h-4 w-4" />
+                  PDF Unificado
+                </Button>
+              </div>
             </CardFooter>
           </Card>
         </div>
@@ -366,14 +387,14 @@ const ReceiptGenerator = () => {
               <CardDescription>Modelo do recibo gerado</CardDescription>
             </CardHeader>
             <CardContent>
-              {!showPreview ? (
+              {!showPreview && !unifiedPdfPreview ? (
                 <div className="border rounded-lg p-6 text-center flex flex-col items-center justify-center min-h-[300px]">
                   <FileText className="h-16 w-16 text-gray-300 mb-2" />
                   <p className="text-muted-foreground">
                     Preencha os dados e clique em "Gerar Recibos" para visualizar
                   </p>
                 </div>
-              ) : (
+              ) : showPreview ? (
                 <div className="receipt-paper">
                   <div className="receipt-header">
                     {selectedCompany?.name || "Empresa"} - {selectedType?.name || "Tipo de Recibo"}
@@ -422,9 +443,57 @@ const ReceiptGenerator = () => {
                     Emitido em {new Date().toLocaleDateString('pt-BR')}
                   </div>
                 </div>
+              ) : (
+                <div className="unified-pdf-preview border rounded-lg p-4">
+                  <div className="pdf-header text-center border-b pb-3 mb-4">
+                    <h3 className="font-bold">{selectedCompany?.name || "Empresa"}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Recibos unificados de {selectedType?.name || "Tipo de Recibo"}
+                    </p>
+                    <p className="text-xs">
+                      Referência: {formData.reference} | Período: {formData.startDate} a {formData.endDate}
+                    </p>
+                  </div>
+                  
+                  <div className="pdf-contents space-y-6">
+                    {formData.employees.slice(0, 3).map((employee, idx) => (
+                      <div key={idx} className="mini-receipt p-2 border-b text-sm">
+                        <div className="flex justify-between">
+                          <span className="font-medium">{employee.name || `Funcionário ${idx + 1}`}</span>
+                          <span>R$ {employee.value || "0,00"}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>{employee.position || "Cargo"}</span>
+                          <span>Dias: {employee.days || "0"}</span>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {formData.employees.length > 3 && (
+                      <div className="text-center text-sm text-muted-foreground">
+                        + {formData.employees.length - 3} funcionários adicionais
+                      </div>
+                    )}
+                    
+                    <div className="pdf-summary border-t pt-3 mt-4">
+                      <div className="flex justify-between font-medium">
+                        <span>Total de funcionários:</span>
+                        <span>{formData.employees.length}</span>
+                      </div>
+                      <div className="flex justify-between font-bold mt-2">
+                        <span>Valor total:</span>
+                        <span>R$ {formData.employees.reduce((total, emp) => total + (parseFloat(emp.value.replace(/[^\d,]/g, '').replace(',', '.')) || 0), 0).toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="pdf-footer mt-6 text-right text-xs text-muted-foreground">
+                    Documento gerado em {new Date().toLocaleDateString('pt-BR')}
+                  </div>
+                </div>
               )}
             </CardContent>
-            {showPreview && (
+            {(showPreview || unifiedPdfPreview) && (
               <CardFooter>
                 <Button variant="outline" className="w-full">
                   <Download className="mr-2 h-4 w-4" /> Baixar PDF
