@@ -17,7 +17,15 @@ import ReceiptGenerator from "./pages/ReceiptGenerator";
 import ReceiptHistory from "./pages/ReceiptHistory";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Create a client with default configurations
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
