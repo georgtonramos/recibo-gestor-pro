@@ -16,3 +16,9 @@ export const MOCK_COMPANIES = [
   { id: 2, name: "Mega Sistemas" },
   { id: 3, name: "Construtech" },
 ];
+
+export const MOCK_RECEIPT_TYPES = [
+  { id: 1, name: "Vale Transporte" },
+  { id: 2, name: "Vale Alimentação" },
+  { id: 3, name: "Adiantamento" },
+];
