@@ -74,11 +74,15 @@ const EmployeeList = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCompany, setSelectedCompany] = useState("all"); // Changed from empty string to "all"
+  const [selectedCompany, setSelectedCompany] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false); // New state for view dialog
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false); // New state for edit dialog
   const [currentPage, setCurrentPage] = useState(1);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+  const [employeeToView, setEmployeeToView] = useState<Employee | null>(null); // New state for viewing employee
+  const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null); // New state for editing employee
   const [newEmployee, setNewEmployee] = useState({
     name: "",
     email: "",
@@ -97,7 +101,7 @@ const EmployeeList = () => {
       employee.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
       employee.department.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesCompany = selectedCompany === "all" || employee.company === selectedCompany; // Updated condition
+    const matchesCompany = selectedCompany === "all" || employee.company === selectedCompany;
     
     return matchesSearch && matchesCompany;
   });
@@ -123,6 +127,18 @@ const EmployeeList = () => {
     });
   };
 
+  const handleUpdateEmployee = () => {
+    // In a real app, this would be an API call to update the employee
+    if (employeeToEdit) {
+      toast({
+        title: "Funcionário atualizado",
+        description: `${employeeToEdit.name} foi atualizado com sucesso.`,
+      });
+      setIsEditDialogOpen(false);
+      setEmployeeToEdit(null);
+    }
+  };
+
   const handleConfirmDelete = () => {
     // In a real app, this would be an API call
     if (employeeToDelete) {
@@ -133,6 +149,16 @@ const EmployeeList = () => {
       setIsDeleteDialogOpen(false);
       setEmployeeToDelete(null);
     }
+  };
+
+  const openViewDialog = (employee: Employee) => {
+    setEmployeeToView(employee);
+    setIsViewDialogOpen(true);
+  };
+
+  const openEditDialog = (employee: Employee) => {
+    setEmployeeToEdit({...employee}); // Create a copy to avoid direct mutation
+    setIsEditDialogOpen(true);
   };
 
   const openDeleteDialog = (employee: Employee) => {
@@ -169,7 +195,7 @@ const EmployeeList = () => {
                   <SelectValue placeholder="Todas as empresas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas as empresas</SelectItem> {/* Changed from empty string to "all" */}
+                  <SelectItem value="all">Todas as empresas</SelectItem>
                   {MOCK_COMPANIES.map((company) => (
                     <SelectItem key={company.id} value={company.name}>
                       {company.name}
@@ -228,10 +254,10 @@ const EmployeeList = () => {
                     <TableCell>{employee.department}</TableCell>
                     <TableCell>{employee.company}</TableCell>
                     <TableCell className="text-right space-x-1">
-                      <Button size="icon" variant="ghost" onClick={() => navigate(`/funcionarios/${employee.id}`)}>
+                      <Button size="icon" variant="ghost" onClick={() => openViewDialog(employee)}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button size="icon" variant="ghost" onClick={() => navigate(`/funcionarios/${employee.id}/editar`)}>
+                      <Button size="icon" variant="ghost" onClick={() => openEditDialog(employee)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(employee)}>
@@ -345,6 +371,116 @@ const EmployeeList = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleAddEmployee}>Adicionar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Employee Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Funcionário</DialogTitle>
+          </DialogHeader>
+          {employeeToView && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Nome completo</h3>
+                  <p className="mt-1">{employeeToView.name}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Email</h3>
+                  <p className="mt-1">{employeeToView.email}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Cargo</h3>
+                  <p className="mt-1">{employeeToView.role}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Departamento</h3>
+                  <p className="mt-1">{employeeToView.department}</p>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Empresa</h3>
+                <p className="mt-1">{employeeToView.company}</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsViewDialogOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Employee Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Editar Funcionário</DialogTitle>
+          </DialogHeader>
+          {employeeToEdit && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Nome completo</Label>
+                <Input 
+                  id="edit-name" 
+                  value={employeeToEdit.name} 
+                  onChange={e => setEmployeeToEdit({...employeeToEdit, name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input 
+                  id="edit-email" 
+                  type="email"
+                  value={employeeToEdit.email} 
+                  onChange={e => setEmployeeToEdit({...employeeToEdit, email: e.target.value})}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-role">Cargo</Label>
+                  <Input 
+                    id="edit-role" 
+                    value={employeeToEdit.role} 
+                    onChange={e => setEmployeeToEdit({...employeeToEdit, role: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-department">Departamento</Label>
+                  <Input 
+                    id="edit-department" 
+                    value={employeeToEdit.department} 
+                    onChange={e => setEmployeeToEdit({...employeeToEdit, department: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-company">Empresa</Label>
+                <Select 
+                  value={employeeToEdit.company} 
+                  onValueChange={(value) => setEmployeeToEdit({...employeeToEdit, company: value})}
+                >
+                  <SelectTrigger id="edit-company">
+                    <SelectValue placeholder="Selecione a empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MOCK_COMPANIES.map((company) => (
+                      <SelectItem key={company.id} value={company.name}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleUpdateEmployee}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

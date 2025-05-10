@@ -16,6 +16,7 @@ import EmployeeList from "./pages/EmployeeList";
 import ReceiptGenerator from "./pages/ReceiptGenerator";
 import ReceiptHistory from "./pages/ReceiptHistory";
 import NotFound from "./pages/NotFound";
+import ConfigurationPage from "./pages/ConfigurationPage";
 
 // Create a client with default configurations
 const queryClient = new QueryClient({
@@ -67,6 +68,11 @@ const App = () => (
                   <ReceiptHistory />
                 </RequireAuth>
               } />
+              <Route path="/configuracoes" element={
+                <RequireAuth allowedRoles={["admin"]}>
+                  <ConfigurationPage />
+                </RequireAuth>
+              } />
               
               {/* Employee-only routes */}
               <Route path="/meus-recibos" element={
@@ -77,6 +83,18 @@ const App = () => (
               <Route path="/perfil" element={
                 <RequireAuth>
                   <NotFound />
+                </RequireAuth>
+              } />
+              
+              {/* Employee detail routes */}
+              <Route path="/funcionarios/:id" element={
+                <RequireAuth allowedRoles={["admin"]}>
+                  <EmployeeList />
+                </RequireAuth>
+              } />
+              <Route path="/funcionarios/:id/editar" element={
+                <RequireAuth allowedRoles={["admin"]}>
+                  <EmployeeList />
                 </RequireAuth>
               } />
               
