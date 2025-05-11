@@ -2,7 +2,6 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { login as apiLogin } from '../services/authService';
 import { useToast } from '@/hooks/use-toast';
-import axios from 'axios';
 
 type User = {
   id: string;
@@ -96,20 +95,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       });
     } catch (err) {
       let errorMsg = "Falha ao fazer login";
-      
-      if (err instanceof Error) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        errorMsg = "Credenciais inválidas";
+      } else if (axios.isAxiosError(err) && err.response) {
+        errorMsg = `Erro: ${err.response.data.message || err.message}`;
+      } else if (err instanceof Error) {
         errorMsg = err.message;
-      } else if (axios.isAxiosError(err)) {
-        if (err.code === 'ERR_NETWORK') {
-          errorMsg = "Não foi possível conectar ao servidor. Verifique sua conexão.";
-        } else if (err.response?.status === 401) {
-          errorMsg = "Credenciais inválidas";
-        } else if (err.response) {
-          errorMsg = `Erro: ${err.response.data.message || err.message}`;
-        }
       }
-      
-      console.error('Login error:', err);
       
       setError(errorMsg);
       toast({
@@ -117,6 +109,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         description: errorMsg,
         variant: "destructive",
       });
+      
+      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }
@@ -138,3 +132,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     </AuthContext.Provider>
   );
 };
+
+// Missing import for axios
+import axios from 'axios';
