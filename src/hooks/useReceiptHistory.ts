@@ -1,32 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { Receipt } from "@/components/receipts/ReceiptTable";
-
-// Mock data
-const MOCK_RECEIPT_TYPES = [
-  { id: 1, name: "Vale Transporte" },
-  { id: 2, name: "Vale Alimentação" },
-  { id: 3, name: "Adiantamento" },
-];
-
-const MOCK_RECEIPTS = [
-  { id: 1, company: "TechCorp", type: "Vale Transporte", reference: "05/2025", date: "01/05/2025", employee: "João Silva", value: "R$ 220,00", unified: false },
-  { id: 2, company: "TechCorp", type: "Vale Alimentação", reference: "05/2025", date: "01/05/2025", employee: "João Silva", value: "R$ 550,00", unified: false },
-  { id: 3, company: "TechCorp", type: "Vale Transporte", reference: "05/2025", date: "01/05/2025", employee: "Maria Oliveira", value: "R$ 220,00", unified: false },
-  { id: 4, company: "Mega Sistemas", type: "Vale Alimentação", reference: "05/2025", date: "02/05/2025", employee: "Pedro Santos", value: "R$ 600,00", unified: false },
-  { id: 5, company: "Construtech", type: "Vale Transporte", reference: "04/2025", date: "05/04/2025", employee: "Ana Costa", value: "R$ 180,00", unified: false },
-  { id: 6, company: "Mega Sistemas", type: "Adiantamento", reference: "04/2025", date: "10/04/2025", employee: "Carlos Pereira", value: "R$ 1.500,00", unified: false },
-  { id: 7, company: "TechCorp", type: "Vale Alimentação", reference: "04/2025", date: "01/04/2025", employee: "Lucia Ferreira", value: "R$ 550,00", unified: false },
-  { id: 8, company: "Construtech", type: "Vale Transporte", reference: "04/2025", date: "05/04/2025", employee: "Roberto Alves", value: "R$ 180,00", unified: false },
-  { id: 9, company: "TechCorp", type: "Vale Transporte", reference: "03/2025", date: "01/03/2025", employee: "João Silva", value: "R$ 220,00", unified: false },
-  { id: 10, company: "TechCorp", type: "Vale Alimentação", reference: "03/2025", date: "01/03/2025", employee: "Maria Oliveira", value: "R$ 550,00", unified: false },
-  { id: 11, company: "Mega Sistemas", type: "Vale Transporte", reference: "03/2025", date: "02/03/2025", employee: "Pedro Santos", value: "R$ 200,00", unified: false },
-  { id: 12, company: "Construtech", type: "Vale Alimentação", reference: "03/2025", date: "03/03/2025", employee: "Ana Costa", value: "R$ 480,00", unified: false },
-  // Adding unified receipt examples
-  { id: 13, company: "TechCorp", type: "Unificado - Vale Transporte", reference: "05/2025", date: "01/05/2025", employee: "Múltiplos", value: "R$ 660,00", unified: true },
-  { id: 14, company: "TechCorp", type: "Unificado - Vale Alimentação", reference: "05/2025", date: "01/05/2025", employee: "Múltiplos", value: "R$ 1.100,00", unified: true },
-];
+import { Receipt, getReceipts, getReceipt, deleteReceipt, downloadPdf } from "@/services/receiptService";
+import { getCompanies } from "@/services/companyService";
+import { MOCK_RECEIPT_TYPES } from "@/services/employeeService";
 
 interface UseReceiptHistoryProps {
   isAdmin: boolean;
@@ -35,6 +12,10 @@ interface UseReceiptHistoryProps {
 
 export const useReceiptHistory = ({ isAdmin, userName }: UseReceiptHistoryProps) => {
   const { toast } = useToast();
+  
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [companies, setCompanies] = useState<{id: number, name: string}[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const [filters, setFilters] = useState({
     company: "all",
@@ -49,6 +30,48 @@ export const useReceiptHistory = ({ isAdmin, userName }: UseReceiptHistoryProps)
   const [isUnifiedPreviewOpen, setIsUnifiedPreviewOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
+  useEffect(() => {
+    fetchCompanies();
+    fetchReceipts();
+  }, [isAdmin, userName]);
+
+  const fetchCompanies = async () => {
+    try {
+      const fetchedCompanies = await getCompanies();
+      setCompanies(fetchedCompanies);
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+      toast({
+        title: "Erro ao carregar empresas",
+        description: "Não foi possível buscar a lista de empresas.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchReceipts = async () => {
+    setLoading(true);
+    try {
+      let data = await getReceipts();
+      
+      // If employee, show only their receipts
+      if (!isAdmin && userName) {
+        data = data.filter(receipt => receipt.employee === userName && !receipt.unified);
+      }
+      
+      setReceipts(data);
+    } catch (error) {
+      console.error('Error fetching receipts:', error);
+      toast({
+        title: "Erro ao carregar recibos",
+        description: "Não foi possível buscar a lista de recibos.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFilterChange = (name: string, value: string | boolean) => {
     setFilters(prev => ({ ...prev, [name]: value }));
     setCurrentPage(1); // Reset to first page when filters change
@@ -59,44 +82,76 @@ export const useReceiptHistory = ({ isAdmin, userName }: UseReceiptHistoryProps)
     setCurrentPage(1); // Reset to first page when search changes
   };
 
-  const handleViewReceipt = (receipt: Receipt) => {
+  const handleViewReceipt = async (receipt: Receipt) => {
     setSelectedReceipt(receipt);
-    if (receipt.unified) {
-      setIsUnifiedPreviewOpen(true);
-    } else {
-      setIsPreviewOpen(true);
-    }
-  };
-  
-  const handleDownloadReceipt = (receipt: Receipt) => {
-    // In a real app, this would download the PDF
-    toast({
-      title: "Recibo baixado",
-      description: `O recibo de ${receipt.type} ${receipt.unified ? "unificado " : ""}foi baixado.`,
-    });
-  };
-
-  const handleSaveUnifiedReceipt = () => {
-    if (selectedReceipt?.unified) {
+    
+    try {
+      // In a real implementation, you'd fetch the receipt details here
+      // const detailedReceipt = await getReceipt(receipt.id);
+      // setSelectedReceipt(detailedReceipt);
+      
+      if (receipt.unified) {
+        setIsUnifiedPreviewOpen(true);
+      } else {
+        setIsPreviewOpen(true);
+      }
+    } catch (error) {
+      console.error('Error fetching receipt details:', error);
       toast({
-        title: "Recibo unificado salvo",
-        description: `O recibo unificado de ${selectedReceipt.type} foi salvo com sucesso.`,
+        title: "Erro ao carregar detalhes do recibo",
+        description: "Não foi possível buscar os detalhes do recibo.",
+        variant: "destructive",
       });
-      setIsUnifiedPreviewOpen(false);
+    }
+  };
+  
+  const handleDownloadReceipt = async (receipt: Receipt) => {
+    try {
+      // In a real implementation, you would fetch the PDF here
+      // const pdf = await getReceiptPdf(receipt.id);
+      // downloadPdf(pdf, `recibo_${receipt.id}.pdf`);
+      
+      toast({
+        title: "Recibo baixado",
+        description: `O recibo de ${receipt.type} ${receipt.unified ? "unificado " : ""}foi baixado.`,
+      });
+    } catch (error) {
+      console.error('Error downloading receipt:', error);
+      toast({
+        title: "Erro ao baixar recibo",
+        description: "Não foi possível baixar o recibo.",
+        variant: "destructive",
+      });
     }
   };
 
-  // Filter receipts based on user role and filters
-  let filteredReceipts = [...MOCK_RECEIPTS];
-  
-  // If employee, show only their receipts (never unified ones)
-  if (!isAdmin && userName) {
-    filteredReceipts = filteredReceipts.filter(receipt => receipt.employee === userName && !receipt.unified);
-  } else {
-    // For admins, apply the unified filter if needed
-    if (!filters.showUnified) {
-      filteredReceipts = filteredReceipts.filter(receipt => !receipt.unified);
+  const handleSaveUnifiedReceipt = async () => {
+    if (selectedReceipt?.unified) {
+      try {
+        // In a real implementation, you would save the unified receipt here
+        
+        toast({
+          title: "Recibo unificado salvo",
+          description: `O recibo unificado de ${selectedReceipt.type} foi salvo com sucesso.`,
+        });
+        setIsUnifiedPreviewOpen(false);
+      } catch (error) {
+        console.error('Error saving unified receipt:', error);
+        toast({
+          title: "Erro ao salvar recibo unificado",
+          description: "Não foi possível salvar o recibo unificado.",
+          variant: "destructive",
+        });
+      }
     }
+  };
+
+  // Filter receipts based on filters
+  let filteredReceipts = [...receipts];
+  
+  // For admins, apply the unified filter if needed
+  if (isAdmin && !filters.showUnified) {
+    filteredReceipts = filteredReceipts.filter(receipt => !receipt.unified);
   }
   
   // Apply other filters
@@ -128,12 +183,15 @@ export const useReceiptHistory = ({ isAdmin, userName }: UseReceiptHistoryProps)
 
   return {
     filters,
+    companies,
+    receiptTypes: MOCK_RECEIPT_TYPES,
     selectedReceipt,
     isPreviewOpen,
     isUnifiedPreviewOpen,
     currentPage,
     totalPages,
     paginatedReceipts,
+    loading,
     handleFilterChange,
     handleSearchChange,
     handleViewReceipt,

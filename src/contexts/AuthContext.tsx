@@ -1,5 +1,7 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { login as apiLogin } from '../services/authService';
+import { useToast } from '@/hooks/use-toast';
 
 type User = {
   id: string;
@@ -34,53 +36,80 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Check if the user is already logged in (from localStorage)
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    const token = localStorage.getItem('token');
+    
+    if (storedUser && token) {
       try {
         setUser(JSON.parse(storedUser));
       } catch (e) {
         console.error('Failed to parse stored user:', e);
         localStorage.removeItem('user');
+        localStorage.removeItem('token');
       }
     }
     setLoading(false);
   }, []);
 
-  // Mock login function - in a real app, this would make an API call
   const login = async (email: string, password: string) => {
     setLoading(true);
     setError(null);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the actual API for login
+      const response = await apiLogin({ email, password });
       
-      if (email === 'admin@exemplo.com' && password === 'admin123') {
-        const adminUser: User = {
+      // Store the token in localStorage
+      localStorage.setItem('token', response.token);
+      
+      // For demo purposes, we'll hardcode a user object based on email
+      // In a real app, the API would return user info or you'd make another call
+      let userData: User;
+      
+      if (email === 'admin@exemplo.com') {
+        userData = {
           id: '1',
           name: 'Admin',
           email: 'admin@exemplo.com',
           role: 'admin'
         };
-        setUser(adminUser);
-        localStorage.setItem('user', JSON.stringify(adminUser));
-      } else if (email === 'funcionario@exemplo.com' && password === 'func123') {
-        const employeeUser: User = {
+      } else {
+        userData = {
           id: '2',
           name: 'João Funcionário',
-          email: 'funcionario@exemplo.com',
+          email: email,
           role: 'employee'
         };
-        setUser(employeeUser);
-        localStorage.setItem('user', JSON.stringify(employeeUser));
-      } else {
-        throw new Error('Credenciais inválidas');
       }
+      
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      toast({
+        title: "Login realizado com sucesso!",
+        description: "Bem-vindo de volta.",
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao fazer login');
+      let errorMsg = "Falha ao fazer login";
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        errorMsg = "Credenciais inválidas";
+      } else if (axios.isAxiosError(err) && err.response) {
+        errorMsg = `Erro: ${err.response.data.message || err.message}`;
+      } else if (err instanceof Error) {
+        errorMsg = err.message;
+      }
+      
+      setError(errorMsg);
+      toast({
+        title: "Erro de autenticação",
+        description: errorMsg,
+        variant: "destructive",
+      });
+      
       console.error('Login error:', err);
     } finally {
       setLoading(false);
@@ -89,7 +118,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = () => {
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
     setUser(null);
+    toast({
+      title: "Logout realizado",
+      description: "Sua sessão foi encerrada com sucesso.",
+    });
   };
 
   return (
@@ -98,3 +132,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     </AuthContext.Provider>
   );
 };
+
+// Missing import for axios
+import axios from 'axios';

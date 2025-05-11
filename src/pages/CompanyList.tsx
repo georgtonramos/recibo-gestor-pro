@@ -1,6 +1,6 @@
 
 import AppLayout from "@/components/layouts/AppLayout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,28 +17,16 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Building, Plus, Search, Edit, Trash } from "lucide-react";
+import { Company, getCompanies, createCompany, updateCompany, deleteCompany } from "@/services/companyService";
 
-const MOCK_COMPANIES = [
-  { id: 1, name: "TechCorp", cnpj: "12.345.678/0001-90", address: "Av. Paulista, 1000, São Paulo - SP", contact: "contato@techcorp.com.br" },
-  { id: 2, name: "Mega Sistemas", cnpj: "98.765.432/0001-10", address: "Rua da Consolação, 200, São Paulo - SP", contact: "contato@megasistemas.com" },
-  { id: 3, name: "Construtech", cnpj: "45.678.901/0001-23", address: "Av. Brigadeiro Faria Lima, 500, São Paulo - SP", contact: "contato@construtech.com.br" },
-  { id: 4, name: "Global Services", cnpj: "56.789.012/0001-45", address: "Av. Rebouças, 1500, São Paulo - SP", contact: "contato@globalservices.com" },
-  { id: 5, name: "Inova Tech", cnpj: "67.890.123/0001-56", address: "Rua Augusta, 1200, São Paulo - SP", contact: "contato@inovatech.com.br" },
-];
-
-type Company = {
-  id: number;
-  name: string;
-  cnpj: string;
-  address: string;
-  contact: string;
-};
-
-const CompanyForm = ({ onClose, company = null }: { onClose: () => void, company?: Company | null }) => {
+const CompanyForm = ({ onClose, company = null, onSave }: { 
+  onClose: () => void, 
+  company?: Company | null,
+  onSave: (data: Omit<Company, 'id'>) => void
+}) => {
   const [formData, setFormData] = useState({
     name: company?.name || "",
     cnpj: company?.cnpj || "",
@@ -47,19 +35,30 @@ const CompanyForm = ({ onClose, company = null }: { onClose: () => void, company
   });
   
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: company ? "Empresa atualizada!" : "Empresa cadastrada!",
-      description: `${formData.name} foi ${company ? "atualizada" : "adicionada"} com sucesso.`,
-    });
-    onClose();
+    setIsSubmitting(true);
+    
+    try {
+      await onSave(formData);
+      onClose();
+    } catch (error) {
+      console.error('Error saving company:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao salvar a empresa.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -120,8 +119,12 @@ const CompanyForm = ({ onClose, company = null }: { onClose: () => void, company
       
       <div className="flex justify-end space-x-2 pt-4">
         <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-        <Button type="submit" className="bg-receipt-600 hover:bg-receipt-700">
-          {company ? "Atualizar" : "Cadastrar"}
+        <Button 
+          type="submit" 
+          className="bg-receipt-600 hover:bg-receipt-700"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Salvando..." : company ? "Atualizar" : "Cadastrar"}
         </Button>
       </div>
     </form>
@@ -129,18 +132,51 @@ const CompanyForm = ({ onClose, company = null }: { onClose: () => void, company
 };
 
 const CompanyList = () => {
-  const [companies] = useState<Company[]>(MOCK_COMPANIES);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const handleDelete = (id: number, name: string) => {
-    if (window.confirm(`Tem certeza que deseja excluir a empresa ${name}?`)) {
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  const fetchCompanies = async () => {
+    setLoading(true);
+    try {
+      const data = await getCompanies();
+      setCompanies(data);
+    } catch (error) {
+      console.error('Error fetching companies:', error);
       toast({
-        title: "Empresa excluída",
-        description: `${name} foi removida com sucesso.`,
+        title: "Erro ao carregar empresas",
+        description: "Não foi possível buscar a lista de empresas. Por favor, tente novamente.",
+        variant: "destructive",
       });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number, name: string) => {
+    if (window.confirm(`Tem certeza que deseja excluir a empresa ${name}?`)) {
+      try {
+        await deleteCompany(id);
+        setCompanies(companies.filter(company => company.id !== id));
+        toast({
+          title: "Empresa excluída",
+          description: `${name} foi removida com sucesso.`,
+        });
+      } catch (error) {
+        console.error('Error deleting company:', error);
+        toast({
+          title: "Erro ao excluir empresa",
+          description: "Ocorreu um erro ao tentar excluir a empresa.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -152,6 +188,29 @@ const CompanyList = () => {
   const handleNewCompany = () => {
     setEditingCompany(null);
     setIsDialogOpen(true);
+  };
+
+  const handleSaveCompany = async (formData: Omit<Company, 'id'>) => {
+    try {
+      if (editingCompany) {
+        const updated = await updateCompany(editingCompany.id, formData);
+        setCompanies(companies.map(c => c.id === editingCompany.id ? updated : c));
+        toast({
+          title: "Empresa atualizada",
+          description: `${formData.name} foi atualizada com sucesso.`,
+        });
+      } else {
+        const created = await createCompany(formData);
+        setCompanies([...companies, created]);
+        toast({
+          title: "Empresa cadastrada",
+          description: `${formData.name} foi adicionada com sucesso.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error saving company:', error);
+      throw error; // Re-throw to be caught by the form component
+    }
   };
 
   const filteredCompanies = companies.filter(company => 
@@ -199,7 +258,16 @@ const CompanyList = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCompanies.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    <div className="flex flex-col items-center text-muted-foreground">
+                      <div className="animate-spin h-8 w-8 border-t-2 border-receipt-500 rounded-full mb-2"></div>
+                      <p>Carregando empresas...</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredCompanies.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
                     <div className="flex flex-col items-center text-muted-foreground">
@@ -243,7 +311,8 @@ const CompanyList = () => {
           </DialogHeader>
           <CompanyForm 
             company={editingCompany} 
-            onClose={() => setIsDialogOpen(false)} 
+            onClose={() => setIsDialogOpen(false)}
+            onSave={handleSaveCompany}
           />
         </DialogContent>
       </Dialog>

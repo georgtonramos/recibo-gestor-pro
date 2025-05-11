@@ -1,5 +1,46 @@
+import apiClient from './apiClient';
 
-// Mock data that would normally come from an API
+export interface Employee {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  department: string;
+  company: string;
+  empresaId?: number;
+}
+
+export interface ReceiptType {
+  id: number;
+  name: string;
+}
+
+export const getEmployees = async (empresaId?: number): Promise<Employee[]> => {
+  const endpoint = empresaId ? `/funcionario?empresaId=${empresaId}` : '/funcionario';
+  const response = await apiClient.get<Employee[]>(endpoint);
+  return response.data;
+};
+
+export const getEmployee = async (id: number): Promise<Employee> => {
+  const response = await apiClient.get<Employee>(`/funcionario/${id}`);
+  return response.data;
+};
+
+export const createEmployee = async (employee: Omit<Employee, 'id'>): Promise<Employee> => {
+  const response = await apiClient.post<Employee>('/funcionario', employee);
+  return response.data;
+};
+
+export const updateEmployee = async (id: number, employee: Omit<Employee, 'id'>): Promise<Employee> => {
+  const response = await apiClient.put<Employee>(`/funcionario/${id}`, employee);
+  return response.data;
+};
+
+export const deleteEmployee = async (id: number): Promise<void> => {
+  await apiClient.delete(`/funcionario/${id}`);
+};
+
+// Mock data that would normally come from an API (keeping for fallback)
 export const MOCK_EMPLOYEES = [
   { id: 1, name: "João Silva", email: "joao.silva@techcorp.com", role: "Desenvolvedor", department: "TI", company: "TechCorp" },
   { id: 2, name: "Maria Oliveira", email: "maria.oliveira@techcorp.com", role: "Designer", department: "Design", company: "TechCorp" },

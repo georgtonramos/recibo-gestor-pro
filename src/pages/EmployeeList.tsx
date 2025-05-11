@@ -4,7 +4,8 @@ import AppLayout from "@/components/layouts/AppLayout";
 import { Button } from "@/components/ui/button";
 import { UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { MOCK_EMPLOYEES, MOCK_COMPANIES } from "@/services/employeeService";
+import { useEmployees } from "@/hooks/useEmployees";
+import { Employee } from "@/services/employeeService";
 
 // Component imports
 import EmployeeFilter from "@/components/employees/EmployeeFilter";
@@ -14,19 +15,8 @@ import ViewEmployeeDialog from "@/components/employees/dialogs/ViewEmployeeDialo
 import EditEmployeeDialog from "@/components/employees/dialogs/EditEmployeeDialog";
 import DeleteEmployeeDialog from "@/components/employees/dialogs/DeleteEmployeeDialog";
 
-type Employee = {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  department: string;
-  company: string;
-};
-
 const EmployeeList = () => {
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCompany, setSelectedCompany] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -35,49 +25,18 @@ const EmployeeList = () => {
   const [employeeToView, setEmployeeToView] = useState<Employee | null>(null);
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
 
-  // Filter employees based on search and company filter
-  const filteredEmployees = MOCK_EMPLOYEES.filter(employee => {
-    const matchesSearch = !searchQuery || 
-      employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.department.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCompany = selectedCompany === "all" || employee.company === selectedCompany;
-    
-    return matchesSearch && matchesCompany;
-  });
-
-  const handleAddEmployee = (newEmployee: { name: string; email: string; role: string; department: string; company: string; }) => {
-    // In a real app, this would be an API call
-    toast({
-      title: "Funcionário adicionado",
-      description: `${newEmployee.name} foi adicionado com sucesso.`,
-    });
-    setIsAddDialogOpen(false);
-  };
-
-  const handleUpdateEmployee = (updatedEmployee: Employee) => {
-    // In a real app, this would be an API call to update the employee
-    toast({
-      title: "Funcionário atualizado",
-      description: `${updatedEmployee.name} foi atualizado com sucesso.`,
-    });
-    setIsEditDialogOpen(false);
-    setEmployeeToEdit(null);
-  };
-
-  const handleConfirmDelete = () => {
-    // In a real app, this would be an API call
-    if (employeeToDelete) {
-      toast({
-        title: "Funcionário removido",
-        description: `${employeeToDelete.name} foi removido com sucesso.`,
-      });
-      setIsDeleteDialogOpen(false);
-      setEmployeeToDelete(null);
-    }
-  };
+  const {
+    employees: filteredEmployees,
+    companies,
+    loading,
+    searchQuery,
+    selectedCompany,
+    setSearchQuery,
+    handleCompanyChange,
+    handleAddEmployee,
+    handleUpdateEmployee,
+    handleDeleteEmployee
+  } = useEmployees();
 
   const openViewDialog = (employee: Employee) => {
     setEmployeeToView(employee);
@@ -94,6 +53,18 @@ const EmployeeList = () => {
     setIsDeleteDialogOpen(true);
   };
 
+  const handleConfirmDelete = async () => {
+    if (employeeToDelete) {
+      try {
+        await handleDeleteEmployee(employeeToDelete.id, employeeToDelete.name);
+        setIsDeleteDialogOpen(false);
+        setEmployeeToDelete(null);
+      } catch (error) {
+        console.error("Error confirming delete:", error);
+      }
+    }
+  };
+
   return (
     <AppLayout>
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
@@ -108,15 +79,16 @@ const EmployeeList = () => {
       </div>
 
       <EmployeeFilter
-        companies={MOCK_COMPANIES}
+        companies={companies}
         searchQuery={searchQuery}
         selectedCompany={selectedCompany}
         onSearchChange={setSearchQuery}
-        onCompanyChange={setSelectedCompany}
+        onCompanyChange={handleCompanyChange}
       />
 
       <EmployeeTable
         employees={filteredEmployees}
+        loading={loading}
         onViewEmployee={openViewDialog}
         onEditEmployee={openEditDialog}
         onDeleteEmployee={openDeleteDialog}
@@ -125,7 +97,7 @@ const EmployeeList = () => {
       {/* Dialogs */}
       <AddEmployeeDialog
         isOpen={isAddDialogOpen}
-        companies={MOCK_COMPANIES}
+        companies={companies}
         onClose={() => setIsAddDialogOpen(false)}
         onAdd={handleAddEmployee}
       />
@@ -139,7 +111,7 @@ const EmployeeList = () => {
       <EditEmployeeDialog
         isOpen={isEditDialogOpen}
         employee={employeeToEdit}
-        companies={MOCK_COMPANIES}
+        companies={companies}
         onClose={() => setIsEditDialogOpen(false)}
         onSave={handleUpdateEmployee}
       />

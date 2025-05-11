@@ -30,6 +30,7 @@ type Employee = {
 
 interface EmployeeTableProps {
   employees: Employee[];
+  loading?: boolean;
   onViewEmployee: (employee: Employee) => void;
   onEditEmployee: (employee: Employee) => void;
   onDeleteEmployee: (employee: Employee) => void;
@@ -37,6 +38,7 @@ interface EmployeeTableProps {
 
 const EmployeeTable = ({
   employees,
+  loading = false,
   onViewEmployee,
   onEditEmployee,
   onDeleteEmployee,
@@ -63,7 +65,16 @@ const EmployeeTable = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedEmployees.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  <div className="flex flex-col items-center text-muted-foreground">
+                    <div className="animate-spin h-8 w-8 border-t-2 border-receipt-500 rounded-full mb-2"></div>
+                    <p>Carregando funcionários...</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : paginatedEmployees.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8">
                   <div className="flex flex-col items-center text-muted-foreground">

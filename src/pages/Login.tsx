@@ -22,20 +22,11 @@ const Login = () => {
     try {
       await login(email, password);
       
-      // If no error was thrown, login was successful
-      toast({
-        title: "Login realizado com sucesso!",
-        description: "Redirecionando para o painel...",
-      });
-      
+      // If login is successful, navigate to dashboard
       navigate('/dashboard');
     } catch (err) {
       // Error is already handled in the auth context
-      toast({
-        title: "Falha no login",
-        description: error || "Verifique suas credenciais e tente novamente.",
-        variant: "destructive",
-      });
+      console.error('Login handling error:', err);
     }
   };
 
