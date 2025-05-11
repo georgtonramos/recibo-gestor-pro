@@ -2,6 +2,7 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { login as apiLogin } from '../services/authService';
 import { useToast } from '@/hooks/use-toast';
+import axios from 'axios';
 
 type User = {
   id: string;
@@ -22,7 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
@@ -126,12 +127,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     });
   };
 
+  const value = {
+    user,
+    loading,
+    login,
+    logout,
+    error
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, error }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
-
-// Missing import for axios
-import axios from 'axios';
