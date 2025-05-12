@@ -1,31 +1,34 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { FileText } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [senha, setSenha] = useState(''); // ✅ correção aqui
   const { login, error, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
-      await login(email, password);
-      
-      // If login is successful, navigate to dashboard
+      await login(email, senha); // ✅ "senha" corretamente passado aqui
       navigate('/dashboard');
     } catch (err) {
-      // Error is already handled in the auth context
       console.error('Login handling error:', err);
     }
   };
@@ -40,9 +43,11 @@ const Login = () => {
             </div>
           </div>
           <h1 className="text-3xl font-bold">Gestor de Recibos</h1>
-          <p className="text-gray-500 mt-2">Gerencie seus recibos de forma simples e prática</p>
+          <p className="text-gray-500 mt-2">
+            Gerencie seus recibos de forma simples e prática
+          </p>
         </div>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Login</CardTitle>
@@ -54,23 +59,23 @@ const Login = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input 
+                <Input
                   id="email"
-                  type="email" 
-                  placeholder="seu@email.com" 
+                  type="email"
+                  placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input 
-                  id="password"
-                  type="password" 
-                  placeholder="********" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                <Label htmlFor="senha">Senha</Label>
+                <Input
+                  id="senha"
+                  type="password"
+                  placeholder="********"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)} // ✅ correção aqui
                   required
                 />
               </div>
@@ -79,17 +84,17 @@ const Login = () => {
               )}
             </CardContent>
             <CardFooter>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full bg-receipt-600 hover:bg-receipt-700"
                 disabled={loading}
               >
-                {loading ? "Entrando..." : "Entrar"}
+                {loading ? 'Entrando...' : 'Entrar'}
               </Button>
             </CardFooter>
           </form>
         </Card>
-        
+
         <div className="text-center text-sm text-gray-500">
           <p>Credenciais de teste:</p>
           <p>Admin: admin@exemplo.com / admin123</p>

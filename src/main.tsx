@@ -1,8 +1,8 @@
-
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { AuthProvider } from './contexts/AuthContext.tsx'; // certifique-se que o caminho esteja correto
 
 const rootElement = document.getElementById("root");
 
@@ -14,6 +14,8 @@ const root = createRoot(rootElement);
 
 root.render(
   <StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </StrictMode>
 );
